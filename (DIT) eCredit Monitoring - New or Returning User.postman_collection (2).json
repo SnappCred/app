@@ -1,0 +1,3179 @@
+{
+	"info": {
+		"_postman_id": "fd90c3a7-40fd-4308-9c6b-be127b758e78",
+		"name": "DIT: eCredit Monitoring - New or Returning User Copy",
+		"description": "**If you have any questions, don't hesitate to reach out to** [**support@crscreditapi.com**](mailto:support@crscreditapi.com)\n\n**SDKS**:\n\n*   Javascript SDK: [https://github.com/StitchCredit/b2c-api-javascript](https://github.com/StitchCredit/b2c-api-javascript)\n*   Python SDK: [https://github.com/StitchCredit/b2c-api-python](https://github.com/StitchCredit/b2c-api-python)\n*   Let us know what language you are using and we'll see if we can create an SDK for you.\n    \n\n**Use the Postman Environment that you were given in conjunction with this collection of requests.**\n\n*   The steps are provided in order for:\n    *   Authenticating returning users\n    *   Registering and authenticating new users\n    *   Retrieving credit data to the user's device to be displayed to the user.\n    *   Retrieving credit data server side for \"Pre-approval use\" (premium feature)\n    *   Step 2 changes depending on whether it is a new or returning user.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17546651",
+		"_collection_link": "https://crscreditapi.postman.co/workspace/b2c~bf05b33b-8c2f-47a7-ba81-bf15fab28a12/collection/17546651-fd90c3a7-40fd-4308-9c6b-be127b758e78?action=share&source=collection_link&creator=17546651"
+	},
+	"item": [
+		{
+			"name": "[Step 1] Direct API Login",
+			"item": [
+				{
+					"name": "Customer Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"if(data) {",
+									"    if(data.token) pm.environment.set(\"dtoken\",data.token);",
+									"    if(data.refresh) pm.environment.set(\"rdtoken\",data.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"secret\": \"{{SECRET}}\",\n    \"apikey\": \"{{API_KEY}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/login",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"direct",
+								"login"
+							]
+						},
+						"description": "*   The integrator's server receives a new Direct Token to be able to interact with the Direct API, as well as a new Refresh Token.\n    *   The Direct Token is valid for 60 minutes.\n    *   The Refresh Token becomes valid slightly before the Direct token expires\n    *   The Refresh Token expires 120 minutes after being issued.\n    *   The Refresh Token can be redeemed to receive a new Direct Token and a new Refresh Token."
+					},
+					"response": []
+				},
+				{
+					"name": "Customer Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"if(data) {",
+									"    if(data.token) pm.environment.set(\"dtoken\",data.token);",
+									"    if(data.refresh) pm.environment.set(\"rdtoken\",data.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/refresh-token?token={{rdtoken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"direct",
+								"refresh-token"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{rdtoken}}"
+								}
+							]
+						},
+						"description": "*   The Refresh Token is redeemed to receive a new Direct Token and a new Refresh Token.\n*   The Refresh Token becomes valid slightly before the Direct token expires (after \\~60 minutes).\n*   The Refresh Token expires 120 minutes after being issued."
+					},
+					"response": []
+				}
+			],
+			"description": "*   Your server will log in to the Direct API to receive a Direct Token and a Refresh Token. The Direct token can be used by your server to leverage the Direct API for:\n    *   Registering new users\n    *   Generating Pre-auth Tokens\n    *   Managing users\n    *   Retrieving additional details about alerts\n    *   Retrieving Equifax credit data for Pre-approval use (premium feature)"
+		},
+		{
+			"name": "[Step 2] Authenticating an existing user?",
+			"item": [
+				{
+					"name": "New Pre-auth Token (send token to user's device)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"if (data) {",
+									"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+									"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{dtoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/preauth-token/{{userId}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"direct",
+								"preauth-token",
+								"{{userId}}"
+							]
+						},
+						"description": "*   **Retrieve a new Pre-auth Token**\n    *   Include this user's userId in the URL path to receive a new Pre-auth token, which then must be passed to the user's device to be redeemed for a User Token (which provides access to the User API for the user's device while the User Token is still valid).\n*   **How to implement**\n    *   One way to pass the Pre-auth token to the user's device, is to create an endpoint on your server that's intended to be called from the user's device. When this endpoint is called, retrieve a new Pre-auth token for this user, then include this Pre-auth token in the response. Make sure the endpoint you create has some sort of authorization in place (such that it's not wide open to the world)."
+					},
+					"response": []
+				}
+			],
+			"description": "The Direct API enables the integrator's server to:\n\n*   **Register new users** to receive:\n    *   A userId identifying the new user to be saved in the integrators system so that this new user can be authenticated when they return to the service.\n    *   A Preauth Token for the new user (\"token\").\n*   **Generate a new Preauth Token for**\n    *   returning/existing users\n    *   users whose User Token expires\n\nThe Pre-auth token is valid for 30 seconds, and must be sent to the user's device to be redeemed for a User Token."
+		},
+		{
+			"name": "[Step 2] Registering a new user?",
+			"item": [
+				{
+					"name": "Register New User (pass returned pre-token to user's device)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"if (data) {",
+									"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+									"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{dtoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{USER_EMAIL}}\",\n    \"fname\": \"{{USER_FNAME}}\",\n    \"lname\": \"{{USER_LNAME}}\",\n    \"mobile\": \"{{USER_MOBILE}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/user-reg",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"direct",
+								"user-reg"
+							]
+						},
+						"description": "*   **Save the userId**\n    *   From the response, save the userId so that this new user can be authenticated when they return to this service, then pass the Pre-auth Token to the user's device to be redeemed for a User Token (which provides access to the User API for the user's device while the User Token is still valid).\n*   **How to implement**\n    *   One way to pass the Pre-auth token to the user's device, is to create an endpoint on your server that is intended to be called from the user's device. When this endpoint is called, register the new user, then include this new user's Pre-auth token in the response. Make sure the endpoint you create has some sort of authorization in place (such that it's not wide open to the world)."
+					},
+					"response": []
+				}
+			],
+			"description": "The Direct API enables the integrator's server to:\n\n*   **Register new users** to receive:\n    *   A userId identifying the new user to be saved in the integrators system so that this new user can be authenticated when they return to the service.\n    *   A Preauth Token for the new user (\"token\").\n*   **Generate a new Preauth Token for**\n    *   returning/existing users\n    *   users whose User Token expires\n\nThe Pre-auth token is valid for 30 seconds, and must be sent to the user's device to be redeemed for a User Token."
+		},
+		{
+			"name": "[Step 3] Identity (exit step 3 when \"idpass\" is true)",
+			"item": [
+				{
+					"name": "[3.1] New User Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();\r",
+									"if (data) {\r",
+									"    if (data.token) pm.environment.set(\"utoken\", data.token);\r",
+									"    if (data.refresh) pm.environment.set(\"rutoken\", data.refresh);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/preauth-token/{{paToken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"preauth-token",
+								"{{paToken}}"
+							]
+						},
+						"description": "*   **User Token**\n    *   Redeem the Pre-auth token received from the integrator's server to get a new User Token, which provides access to the User API for the user's device while the User Token is still valid.\n    *   The User Token is valid for 15 minutes.\n\n*   **Check the value of idpass**\n    *   If the value of idpass equals true, then no additional identity verification is required, and this new User Token will offer access to any subsequent User API requests for retrieving credit data.\n    *   If the value of idpass equals false, then step through the identity verification flow until a response includes idpass with the a value of true."
+					},
+					"response": []
+				},
+				{
+					"name": "[3.1.x] User Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"if(data) {",
+									"    if(data.token) pm.environment.set(\"utoken\",data.token);",
+									"    if(data.refresh) pm.environment.set(\"rutoken\",data.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/refresh-token?token={{rutoken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"refresh-token"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{rutoken}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[3.2] User Identity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Response status code is 200\", function () {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response has the required fields\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData).to.be.an('object');",
+									"    pm.expect(responseData.mobile).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.token).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.expires).to.exist.and.to.be.a('string');",
+									"});",
+									"",
+									"",
+									"pm.test(\"Token is a non-empty string\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.token).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Token should not be empty\");",
+									"});",
+									"",
+									"",
+									"pm.test(\"Expires is a valid date and time format\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.expires).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3,9})?$/, \"Expires is not a valid date and time format\");",
+									"});",
+									"",
+									"",
+									"pm.test(\"Saving token in environment variables\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData).to.be.an('object');",
+									"    pm.expect(responseData.token).to.exist.and.to.be.a('string');",
+									"",
+									"    pm.environment.set(\"mtoken\", responseData.token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fname\": \"{{USER_FNAME}}\",\n    \"lname\": \"{{USER_LNAME}}\",\n    \"mobile\": {{USER_MOBILE}},\n    \"ssn\": {{USER_SSN}},\n    \"dob\": \"{{USER_DOB}}\",\n    \"street1\": \"{{USER_STREET1}}\",\n    \"street2\": \"{{USER_STREET2}}{{$randomint}}{{$randomint}}\",\n    \"city\": \"{{USER_CITY}}\",\n    \"state\": \"{{USER_STATE}}\",\n    \"zip\": \"{{USER_ZIP}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/dit-identity",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"dit-identity"
+							]
+						},
+						"description": "*   **Submit identity information**\n    *   The user submits their identity information, and Equifax evaluates whether additional Identity Verification is required.\n*   **Check the value of idpass**\n    *   If the value of idpass equals true, then no additional identity verification is required, and this new User Token will offer access to any subsequent User API requests for retrieving credit data.\n    *   If the value of idpass equals false, then step through the identity verification flow until a response includes idpass with the a value of true.\n*   **Testing environment**\n    *   In the testing environment, since you are using the same demo identity for multiple user registrations, make sure to provide a unique numeric value for the request body field, \"street2\". This will force Equifax to treat the registration as an unverified identity (which will be useful when you are testing your implementation of this identity verification flow)."
+					},
+					"response": []
+				},
+				{
+					"name": "[3.3] SMFA Send Link [Client Only]",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Response status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData).to.be.an('object');",
+									"    pm.expect(responseData.linkUrl).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.smsMessage).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.token).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.expires).to.exist.and.to.be.a('string');",
+									"});",
+									"",
+									"",
+									"pm.test(\"linkUrl is a non-empty string\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData).to.be.an('object');",
+									"    pm.expect(responseData.linkUrl).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Value should not be empty\");",
+									"});",
+									"",
+									"",
+									"pm.test(\"smsMessage is a non-empty string\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.smsMessage).to.be.a('string').and.to.have.lengthOf.at.least(1, \"smsMessage should not be empty\");",
+									"});",
+									"",
+									"",
+									"pm.test(\"Token is a non-empty string\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.token).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Token should not be empty\");",
+									"});",
+									"",
+									"pm.test(\"Saving token and smsMessage in environment variables\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData).to.be.an('object');",
+									"    pm.expect(responseData.token).to.exist.and.to.be.a('string');",
+									"    pm.expect(responseData.smsMessage).to.exist.and.to.be.a('string');",
+									"",
+									"    pm.environment.set(\"smfaToken\", responseData.token);",
+									"    pm.environment.set(\"atoken\", responseData.smsMessage.split(\"/\").pop());",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/smfa-send-link/{{mtoken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"smfa-send-link",
+								"{{mtoken}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[3.4] SMS Link Verification [Consumer Mobile Only] Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Response status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response body contains the expected message\", function () {",
+									"    const expectedMessage = \"Authentication Complete: You may close this window and return to your application\";",
+									"    const responseBody = pm.response.text();",
+									"",
+									"    pm.expect(responseBody).to.include(expectedMessage);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response time is less than 2000ms\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response headers contain necessary authentication information\", function () {",
+									"    //pm.expect(pm.response.headers.get(\"Content-Type\")).to.exist.and.to.equal(\"text/html; charset=utf-8\");",
+									"    //pm.expect(pm.response.headers.get(\"Cache-Control\")).to.exist.and.to.equal(\"no-cache, no-store, must-revalidate\");",
+									"    //pm.expect(pm.response.headers.get(\"Pragma\")).to.exist.and.to.equal(\"no-cache\");",
+									"    //pm.expect(pm.response.headers.get(\"Expires\")).to.exist.and.to.equal(\"0\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/smfa/auth/{{atoken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"smfa",
+								"auth",
+								"{{atoken}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[3.5] SMFA Verify Status [Client Only]",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Response status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"idpass is a boolean value and to be true\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.idpass).to.be.a('boolean').and.to.equal(true);",
+									"});",
+									"",
+									"pm.test(\"just_enrolled is a boolean value and to be true\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.just_enrolled).to.be.a('boolean').and.to.equal(true);",
+									"});",
+									"",
+									"pm.test(\"flags is a number and greater than 0\", function () {",
+									"    const responseData = pm.response.json();",
+									"",
+									"    pm.expect(responseData.flags).to.be.a('number').and.to.be.greaterThan(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/smfa-verify-status/{{smfaToken}}",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"smfa-verify-status",
+								"{{smfaToken}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "[Step 4] Users API - Credit data to the user's device",
+			"item": [
+				{
+					"name": "Score History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.environment.set(\"mtoken\",data.token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-score-history",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"efx-score-history"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Latest Scores",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.environment.set(\"mtoken\",data.token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-scores",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"efx-latest-scores"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Latest Report",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.environment.set(\"mtoken\",data.token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-report",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"efx-latest-report"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Latest Report Summary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"pm.environment.set(\"mtoken\",data.token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{utoken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-report/summary",
+							"protocol": "{{PROTOCOL}}",
+							"host": [
+								"{{HOST}}"
+							],
+							"port": "{{PORT}}{{BASE_URL}}",
+							"path": [
+								"users",
+								"efx-latest-report",
+								"summary"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "[Step 5 - 8] EFX API - Credit data to user's device",
+			"item": [
+				{
+					"name": "[Step 5] Equifax OAuth",
+					"item": [
+						{
+							"name": "Get EFX Config",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var data = pm.response.json();",
+											"pm.environment.set(\"efx_url\",data.url);",
+											"pm.environment.set(\"efx_api_key\",data.id);",
+											"pm.environment.set(\"efx_assertion\",data.secret);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{utoken}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-config",
+									"protocol": "{{PROTOCOL}}",
+									"host": [
+										"{{HOST}}"
+									],
+									"port": "{{PORT}}{{BASE_URL}}",
+									"path": [
+										"users",
+										"efx-config"
+									]
+								},
+								"description": "*   **Retrieve credentials and URL needed for OAuth for Equifax's API**"
+							},
+							"response": []
+						},
+						{
+							"name": "New EFX OAuth Token",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var response = JSON.parse(responseBody);",
+											"postman.setEnvironmentVariable(\"efxtoken\", response.access_token);",
+											"tests[\"Status code is 200\"] = responseCode.code === 200;"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "urlencoded",
+									"urlencoded": [
+										{
+											"key": "scope",
+											"value": "delivery",
+											"type": "text"
+										},
+										{
+											"key": "grant_type",
+											"value": "jwt-bearer",
+											"type": "text"
+										},
+										{
+											"key": "api_key",
+											"value": "{{efx_api_key}}",
+											"type": "text"
+										},
+										{
+											"key": "client_assertion",
+											"value": "{{efx_assertion}}",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{efx_url}}/oauth/token",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"oauth",
+										"token"
+									]
+								},
+								"description": "*   **Receive a bearer token for Equifax's API**\n    *   The access token received becomes locked to the IP address that was used for this request.\n    *   This access token must be used for Equifax API endpoints in a specific sequence, or else errors will be returned."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "[Step 6]: Send at least one of these to continue",
+					"item": [
+						{
+							"name": "Credit Monitoring",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditMonitoring?format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditMonitoring"
+									],
+									"query": [
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Credit Score Latest",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditScore/latest?format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditScore",
+										"latest"
+									],
+									"query": [
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Credit Score History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditScore/history?historicalLimit=24&format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditScore",
+										"history"
+									],
+									"query": [
+										{
+											"key": "historicalLimit",
+											"value": "24"
+										},
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "[Step 7] List of Credit Report Identifiers",
+					"item": [
+						{
+							"name": "Credit Report List",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var data = pm.response.json();",
+											"pm.environment.set(\"reportId\",data[0].id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditReport?format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditReport"
+									],
+									"query": [
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "[Step 8] Credit Report",
+					"item": [
+						{
+							"name": "Full Credit Report",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditReport/{{reportId}}?format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditReport",
+										"{{reportId}}"
+									],
+									"query": [
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Credit Report Summary",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{efxtoken}}"
+									}
+								],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditReport/{{reportId}}/summary?format=json",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditReport",
+										"{{reportId}}",
+										"summary"
+									],
+									"query": [
+										{
+											"key": "format",
+											"value": "json"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Credit Report - PRINT",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{efx_url}}/v1/creditReport/{{reportId}}/print?access_token={{efxtoken}}",
+									"host": [
+										"{{efx_url}}"
+									],
+									"path": [
+										"v1",
+										"creditReport",
+										"{{reportId}}",
+										"print"
+									],
+									"query": [
+										{
+											"key": "access_token",
+											"value": "{{efxtoken}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "APIs",
+			"item": [
+				{
+					"name": "Direct API - Called from customer's server",
+					"item": [
+						{
+							"name": "Authentication",
+							"item": [
+								{
+									"name": "Customer Login",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if(data) {",
+													"    if(data.token) pm.environment.set(\"dtoken\",data.token);",
+													"    if(data.refresh) pm.environment.set(\"rdtoken\",data.refresh);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"value": "application/json",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"secret\": \"{{SECRET}}\",\n    \"apikey\": \"{{API_KEY}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/login",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"login"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "New Pre-auth Token",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if (data) {",
+													"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+													"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/preauth-token/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"preauth-token",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Customer Refresh Token",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if(data) {",
+													"    if(data.token) pm.environment.set(\"dtoken\",data.token);",
+													"    if(data.refresh) pm.environment.set(\"rdtoken\",data.refresh);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											},
+											{
+												"key": "",
+												"type": "text",
+												"value": "",
+												"disabled": true
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/refresh-token?token={{rdtoken}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"refresh-token"
+											],
+											"query": [
+												{
+													"key": "token",
+													"value": "{{rdtoken}}"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "User Management",
+							"item": [
+								{
+									"name": "Register New User",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if (data) {",
+													"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+													"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"email\":\"{{USER_EMAIL}}\",\"fname\":\"{{USER_FNAME}}\",\"lname\":\"{{USER_LNAME}}\",\"mobile\":\"{{USER_MOBILE}}\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/user-reg",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"user-reg"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Close User Account",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/close-account/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"close-account",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Change User Email",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"email\": \"test@test.com\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/change-email/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"change-email",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Change User Phone",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"mobile\": \"1234567890\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/change-mobile/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"change-mobile",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Change User Host",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/change-host/{{userId}}?host={{HOST_ID}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"change-host",
+												"{{userId}}"
+											],
+											"query": [
+												{
+													"key": "host",
+													"value": "{{HOST_ID}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update User Refresh Date",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/update-refresh/{{userId}}?rmonly=false",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"update-refresh",
+												"{{userId}}"
+											],
+											"query": [
+												{
+													"key": "rmonly",
+													"value": "false"
+												}
+											]
+										},
+										"description": "*Premium Feature - May Require Additional Access"
+									},
+									"response": []
+								},
+								{
+									"name": "Get User",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if (data) {",
+													"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+													"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/preauth-token/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"preauth-token",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Alert Detail (Only for real-time alerts)",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if (data) {",
+													"    if (data.token) pm.environment.set(\"paToken\", data.token);",
+													"    if (data.userId) pm.environment.set(\"userId\", data.userId);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-alert/{{alertId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-alert",
+												"{{alertId}}"
+											]
+										},
+										"description": "*Premium Feature - May Require Additional Access"
+									},
+									"response": []
+								},
+								{
+									"name": "Get Alerts",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-alerts/{{id}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-alerts",
+												"{{id}}"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Credit Data",
+							"item": [
+								{
+									"name": "Get EFX Config",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-config/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-config",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Score History",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-score-history/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-score-history",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Scores",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-latest-scores/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-latest-scores",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Report",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-latest-report/{{userId}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-latest-report",
+												"{{userId}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Report Summary",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{dtoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/direct/efx-latest-report/{{userId}}/summary",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"direct",
+												"efx-latest-report",
+												"{{userId}}",
+												"summary"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "User API - Called from user's device",
+					"item": [
+						{
+							"name": "Authentication and Identity Verification",
+							"item": [
+								{
+									"name": "New User Token",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();\r",
+													"if (data) {\r",
+													"    if (data.token) pm.environment.set(\"utoken\", data.token);\r",
+													"    if (data.refresh) pm.environment.set(\"rutoken\", data.refresh);\r",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/preauth-token/{{paToken}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"preauth-token",
+												"{{paToken}}"
+											]
+										},
+										"description": "*   **User Token**\n    *   Redeem the Pre-auth token received from the integrator's server to get a new User Token, which provides access to the User API for the user's device while the User Token is still valid.\n    *   The User Token is valid for 15 minutes.\n\n*   **Check the value of idpass**\n    *   If the value of idpass equals true, then no additional identity verification is required, and this new User Token will offer access to any subsequent User API requests for retrieving credit data.\n    *   If the value of idpass equals false, then step through the identity verification flow until a response includes idpass with the a value of true."
+									},
+									"response": []
+								},
+								{
+									"name": "User Refresh Token",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"if(data) {",
+													"    if(data.token) pm.environment.set(\"utoken\",data.token);",
+													"    if(data.refresh) pm.environment.set(\"rutoken\",data.refresh);",
+													"}"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											},
+											{
+												"key": "",
+												"type": "text",
+												"value": "",
+												"disabled": true
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/refresh-token?token={{rutoken}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"refresh-token"
+											],
+											"query": [
+												{
+													"key": "token",
+													"value": "{{rutoken}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "User Identity",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"ssn\":\"{{USER_SSN}}\",\"dob\":\"{{USER_DOB}}\",\"mobile\":\"{{USER_MOBILE}}\",\"street1\":\"{{USER_STREET1}}\",\"street2\":\"{{USER_STREET2}}\",\"city\":\"{{USER_CITY}}\",\"state\":\"{{USER_STATE}}\",\"zip\":\"{{USER_ZIP}}\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/identity",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"identity"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Phone Verify",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/get-mobile",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"get-mobile"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Send Mobile Code",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mTransactionKey\",data.key);",
+													"pm.environment.set(\"passcode\",data.passcode);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/send-code/{{mtoken}}",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"send-code",
+												"{{mtoken}}"
+											]
+										},
+										"description": "*   **An OTP is sent**\n    *   An OTP is sent to the phone number that the user provided (assuming Equifax was able to associate the provided phone number with the other identity details that were provided).\n*   **Transaction Key**\n    *   A transaction key is returned that is needed for either redeeming the OTP or sending another OTP.\n*   **Testing environment**\n    *   In the testing environment the response will include the OTP for convenience.\n    *   In the production environment, the OTP will not be included in the response, and it will only be sent to the provided phone number."
+									},
+									"response": []
+								},
+								{
+									"name": "Renew Mobile Code (Send a new OTP)",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mTransactionKey\",data.key);",
+													"pm.environment.set(\"passcode\",data.passcode);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"key\":\"{{mTransactionKey}}\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/renew-code",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"renew-code"
+											]
+										},
+										"description": "*   **An OTP is sent**\n    *   An OTP is sent again to the phone number that the user provided (assuming Equifax was able to associate the provided phone number with the other identity details that were provided).\n*   **Transaction Key**\n    *   The transaction key is returned that is needed for either redeeming the OTP or sending another OTP.\n*   **Testing vs production environment**\n    *   In the testing environment the response will include the OTP for convenience.\n    *   In the production environment, the OTP will not be included in the response, and it will only be sent to the provided phone number."
+									},
+									"response": []
+								},
+								{
+									"name": "Verify Mobile Code",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"key\":\"{{mTransactionKey}}\",\"code\":\"{{passcode}}\"}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/verify-code",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"verify-code"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get Identity Quiz",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"qTransactionKey\",data.key);",
+													"pm.environment.set(\"qzId\",data.id);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/get-quiz",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"get-quiz"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Verify Identity Quiz",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\"key\":\"{{qTransactionKey}}\",\"id\":\"{{qzId}}\",\"answers\": [{\"qid\":1,\"aid\":3},{\"qid\":2,\"aid\":3},{\"qid\":3,\"aid\":3}]}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/verify-quiz",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"verify-quiz"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Get EFX Config",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"efx_url\",data.url);",
+													"pm.environment.set(\"efx_api_key\",data.id);",
+													"pm.environment.set(\"efx_assertion\",data.secret);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-config",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"efx-config"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Credit Data",
+							"item": [
+								{
+									"name": "Score History",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-score-history",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"efx-score-history"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Scores",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-scores",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"efx-latest-scores"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Report",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-report",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"efx-latest-report"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Latest Report Summary",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var data = pm.response.json();",
+													"pm.environment.set(\"mtoken\",data.token);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{utoken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"name": "Content-Type",
+												"type": "text",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/users/efx-latest-report/summary",
+											"protocol": "{{PROTOCOL}}",
+											"host": [
+												"{{HOST}}"
+											],
+											"port": "{{PORT}}{{BASE_URL}}",
+											"path": [
+												"users",
+												"efx-latest-report",
+												"summary"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Webhook Testing API",
+					"item": [
+						{
+							"name": "Webhook Sink (replicate this endpoint on your server)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"//var data = pm.response;",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "test",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "test",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\r\n    {\r\n        \"id\": \"00000000-0000-0000-0000-000000000001\",\r\n        \"type\": \"ERROR\",\r\n        \"user_id\": \"d9126b53-48ea-40b7-933d-3bc6084f287e\",\r\n        \"time\": \"2020-07-26T05:36:00\",\r\n        \"error_code\": \"SC999\",\r\n        \"error_msg\": \"Test Error\"\r\n    },\r\n    {\r\n        \"id\": \"00000000-0000-0000-0000-000000000002\",\r\n        \"type\": \"ERROR\",\r\n        \"user_id\": \"d9126b53-48ea-40b7-933d-3bc6084f287f\",\r\n        \"time\": \"2020-07-26T05:36:00\",\r\n        \"error_code\": \"SC999\",\r\n        \"error_msg\": \"Test Error\"\r\n    }\r\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/test/webhook/sink",
+									"protocol": "{{PROTOCOL}}",
+									"host": [
+										"{{HOST}}"
+									],
+									"port": "{{PORT}}{{BASE_URL}}",
+									"path": [
+										"test",
+										"webhook",
+										"sink"
+									],
+									"query": [
+										{
+											"key": "fail",
+											"value": "true",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Your webhook endpoint should behave like this endpoint (responding with the \"hook_id\" and \"status\").\n\nThis endpoint simulates sending a webhook. The current URL responds with success unless the fail parameter is marked.\n\nUse this sample to directly verify that your webhook endpoint is working by changing the URL of this request to point to your server's webhook endpoint. Ensure that you update this sample's Basic Authentication username & password accordingly."
+							},
+							"response": []
+						},
+						{
+							"name": "Webhook Test",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"//var data = pm.response.json();",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "test",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "test",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/test/webhook/send/{{userId}}?count=1&type=ACCNEW",
+									"protocol": "{{PROTOCOL}}",
+									"host": [
+										"{{HOST}}"
+									],
+									"port": "{{PORT}}{{BASE_URL}}",
+									"path": [
+										"test",
+										"webhook",
+										"send",
+										"{{userId}}"
+									],
+									"query": [
+										{
+											"key": "count",
+											"value": "1"
+										},
+										{
+											"key": "type",
+											"value": "ACCNEW",
+											"description": "Choose from: ACCNEW, IDFAIL, IDSVCOUT, ACCREG, ACCREGFAIL, ACCCLOSED, ACCLOCKED, ACCLOGINFAIL, SCOREREF, REPORTREF, TEST, ERROR"
+										}
+									]
+								},
+								"description": "Send a sample webhook request for a registered userId under your host.\n\nChoose a webhook type from the following to be used as a URL parameter:\n\n*   ACCNEW\n*   IDFAIL\n*   IDSVCOUT\n*   ACCREG\n*   ACCREGFAIL\n*   ACCCLOSED\n*   ACCLOCKED\n*   ACCLOGINFAIL\n*   SCOREREF\n*   REPORTREF\n*   TEST\n*   ERROR"
+							},
+							"response": []
+						},
+						{
+							"name": "Webhook Test: Alert",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"//var data = pm.response.json();",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "password",
+											"value": "test",
+											"type": "string"
+										},
+										{
+											"key": "username",
+											"value": "test",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"name": "Content-Type",
+										"type": "text",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"alertId\":\"CRT:36641804\",\"alertType\":\"BlockedInquiryAlert\",\"creationDate\":\"2021-01-02-20:32\",\"dataSource\":\"EQUIFAX\",\"dateReported\":\"2021-01-02-20:31\",\"enrollmentId\":\"281380\",\"partnerKey\":\"3e78eae7-a3d0-4b72-9bc3-6493b91e84b6\",\"reportingFrequency\":\"RTINQ\",\"tenantKey\":\"EFX-US\",\"institutionType\":\"Miscellaneous Utilities\",\"institutionName\":\"APPLIED TECHNOLOGY GROUP INC\",\"memberNumber\":\"990UZ07496\",\"inquiryIntent\":\"Real Estate\",\"postedDuringMaintenancePeriod\":\"no\",\"inquiryType\":\"CR\",\"endUserText\":\"Naval Credit Union\",\"institutionAddressLine1\":\"Site Address 1\",\"institutionAddressLine2\":\"St# 2 2nd line\",\"institutionCity\":\"ROANOKE\",\"institutionState\":\"IN\",\"institutionPostalCode\":\"46783\",\"institutionPhoneNumber\":\"\",\"customerReferenceNumber\":\"6B0A07E6-4965-4063-A866-5A96C3E21762\"}"
+								},
+								"url": {
+									"raw": "{{PROTOCOL}}://{{HOST}}:{{PORT}}{{BASE_URL}}/test/webhook/send/{{userId}}?count=1&type=ACCALERT",
+									"protocol": "{{PROTOCOL}}",
+									"host": [
+										"{{HOST}}"
+									],
+									"port": "{{PORT}}{{BASE_URL}}",
+									"path": [
+										"test",
+										"webhook",
+										"send",
+										"{{userId}}"
+									],
+									"query": [
+										{
+											"key": "count",
+											"value": "1"
+										},
+										{
+											"key": "type",
+											"value": "ACCALERT"
+										}
+									]
+								},
+								"description": "Send a sample alert request for a registered userId under your host. The sample alert body included is representative of a real-time alert. Standard alerts have considerably less information. At this time, additional alert information is only available using the Direct API endpoint, **Get Alert Detail,** */direct/efx-alert/{{alertId}}.*"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}
